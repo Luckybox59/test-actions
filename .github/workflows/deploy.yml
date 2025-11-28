@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ toLowerCase(github.repository) }}
+  # УДАЛИТЕ IMAGE_NAME ОТСЮДА
 
 jobs:
   build-and-push:
@@ -30,7 +30,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ github.event.repository.name }}
+          # metadata-action сам позаботится о регистре
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
@@ -39,6 +40,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # build-push-action тоже корректно обработает имя
 
   deploy:
     needs: build-and-push
@@ -52,15 +54,18 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            # Формируем имя образа в нижнем регистре для использования в скрипте
+            IMAGE_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+            
             # Логинимся в GitHub Container Registry на сервере
             echo ${{ secrets.GHCR_TOKEN }} | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
             
             # Скачиваем последнюю версию образа
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+            docker pull ${{ env.REGISTRY }}/$IMAGE_NAME:main
             
             # Останавливаем и удаляем старый контейнер, если он существует
             docker stop fastapi-app || true
             docker rm fastapi-app || true
             
             # Запускаем новый контейнер
-            docker run -d --name fastapi-app -p 8000:8000 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+            docker run -d --name fastapi-app -p 8000:8000 ${{ env.REGISTRY }}/$IMAGE_NAME:main
