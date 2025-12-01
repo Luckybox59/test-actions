@@ -39,3 +39,32 @@ async def get_server_datetime():
         "date_info": date_response
     }
 
+@app.get("/health")
+async def health_check():
+    """Проверка здоровья приложения."""
+    return {
+        "status": "OK",
+        "service": "FastAPI Time API",
+        "version": "1.0.0"
+    }
+
+@app.get("/test")
+async def test_endpoint():
+    """Простой тестовый эндпоинт."""
+    return {
+        "message": "Тест пройден успешно!",
+        "test": True,
+        "code": 200
+    }
+
+@app.get("/info")
+async def server_info():
+    """Информация о сервере."""
+    import platform
+    return {
+        "python_version": platform.python_version(),
+        "system": platform.system(),
+        "hostname": platform.node(),
+        "processor": platform.processor() or "Unknown"
+    }
+
